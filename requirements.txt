@@ -10,9 +10,6 @@ sqlalchemy==2.0.23
 websockets==12.0
 aiohttp==3.9.1
 
-# Database
-sqlite3
-
 # Development
 pytest==7.4.3
 black==23.11.0
