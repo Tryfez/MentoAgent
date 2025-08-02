@@ -1,1 +1,0 @@
-# подключение к БД (sqlite/postgres)
