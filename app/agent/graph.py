@@ -65,13 +65,9 @@ llm_with_tools = llm.bind_tools(tools)
 SYSTEM_PROMPT = """
     Ты полезный ассистент, 
     у тебя есть инструменты для поиска информации о погоде, используй, если нужно
+    всегда используй инструмент get_weather_forecast
+    отвечай только в конце работы, пока не добъешься своей цели
 """
-
-system_message = SystemMessage(content=SYSTEM_PROMPT)
-human_message = HumanMessage(content="Какая будет погода в Голицыно 03.08.2025?")
-
-messages = [system_message, human_message]
-
 tools_by_name = {tool.name: tool for tool in tools}
 
 
@@ -96,10 +92,9 @@ def call_tool(state: AgentState):
     return {"messages": outputs}
 
 def call_model(state: AgentState, config: RunnableConfig):
-    print("\n\n 123\n\n")
-    response = llm.invoke(state["messages"], config)
-    print(response, "\n\n 123\n\n")
-    return {"messages", [response]}
+    response = llm_with_tools.invoke(state["messages"], config)
+    
+    return {"messages": [response]}
 
 def should_continue(state: AgentState):
     messages = state["messages"]
@@ -129,7 +124,7 @@ graph.add_edge("call_tool","call_model")
 compiled_graph = graph.compile()
 
 
-res = compiled_graph.invoke({"messages": [SystemMessage(content=SYSTEM_PROMPT),HumanMessage(content="Какая будет погода в Голицыно 03.08.2025?")]})
+res = compiled_graph.invoke({"messages": [SystemMessage(content=SYSTEM_PROMPT),HumanMessage(content="Какая будет погода в Голицыно 2025.08.03? Сегодня 02.08.2025")]})
 
 print(res)
 
