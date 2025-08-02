@@ -4,4 +4,9 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "dotenv>=0.9.9",
+    "geopy>=2.4.1",
+    "langchain-core>=0.3.72",
+    "langgraph>=0.6.2",
+]
