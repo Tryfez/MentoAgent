@@ -1,4 +1,5 @@
 import os
+from geopy import location
 from langchain_openai import ChatOpenAI
 from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
@@ -26,6 +27,8 @@ class SearchInput(BaseModel):
     location:str = Field(description="Город, для котрого требуется узнать прогноз погоды")
     date:str = Field(description="Дата предсказания погоды, в формате (yyyy-mm-dd). Возвращает список словарей со временем и температурой на каждый час")
 
+
+
 #Какая погода завтра в Уваровке в 12 часов?
 #llm: Уваровка, 2025-08-03
 #tool:словари
@@ -48,6 +51,20 @@ def get_weather_forecast(location:str, date:str):
         return {"error": "Location not found"}
     
 
+#функция для определения даты
+# @tool("get_date", args_schema=SearchInput, return_direct=True)
+# def det_date(location:str):
+#      """Retrieves the current date for a given city using Open-Meteo API.Returns a dictionary with the current date."""
+#      location = geolocator.geocode(location)
+#      if location:
+#         try:
+            
+
+
+
+
+
+
 
 
 tools = [get_weather_forecast]
@@ -56,9 +73,6 @@ llm = ChatOpenAI(
     model="gpt-4.1",
     api_key=api_key
 )
-
-#print("1.")
-#print(llm.invoke("Какая будет погода в Голицыно 03.08.2025?").content,"\n\n")
 
 llm_with_tools = llm.bind_tools(tools)
 
@@ -70,13 +84,6 @@ SYSTEM_PROMPT = """
 """
 tools_by_name = {tool.name: tool for tool in tools}
 
-
-#print("2.")
-#какие тулы нужно использовать и какие аргументы должны быть заполнены
-#tool_call = llm_with_tools.invoke(SYSTEM_PROMPT + "Какая будет погода в Голицыно 03.08.2025?").tool_calls[0]
-#даем llm выполнить функцию
-# tool_result = tools[0].invoke(tool_call["args"])
-# print(tool_result)
 
 def call_tool(state: AgentState):
     outputs = []
@@ -102,29 +109,27 @@ def should_continue(state: AgentState):
         return "end"
     return "continue"
 
+def create_graph():
+    graph = StateGraph(AgentState)
 
-graph = StateGraph(AgentState)
+    graph.add_node("call_model", call_model)
+    graph.add_node("call_tool", call_tool)
 
-graph.add_node("call_model", call_model)
-graph.add_node("call_tool", call_tool)
+    graph.set_entry_point("call_model")
 
-graph.set_entry_point("call_model")
+    graph.add_conditional_edges(
+        "call_model",
+        should_continue,
+        {
+            "continue": "call_tool",
+            "end": END
+        }
+    )
 
-graph.add_conditional_edges(
-    "call_model",
-    should_continue,
-    {
-        "continue": "call_tool",
-        "end": END
-    }
-)
+    graph.add_edge("call_tool","call_model")
+    return graph
 
-graph.add_edge("call_tool","call_model")
-
-compiled_graph = graph.compile()
-
-
-res = compiled_graph.invoke({"messages": [SystemMessage(content=SYSTEM_PROMPT),HumanMessage(content="Какая будет погода в Голицыно 2025.08.03? Сегодня 02.08.2025")]})
-
-print(res)
+#compiled_graph = graph.compile()
+#res = compiled_graph.invoke({"messages": [SystemMessage(content=SYSTEM_PROMPT),HumanMessage(content="Какая будет погода в Голицыно 2025.08.03? Сегодня 02.08.2025")]})
+#rint(res)
 

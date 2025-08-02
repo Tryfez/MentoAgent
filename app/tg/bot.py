@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message
-
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
 # Импортируем наш ReAct агент
-from app.agent.graph import run_agent
+from app.agent.graph import create_graph, SYSTEM_PROMPT
 
 # Загрузка переменных окружения из .env файла
 load_dotenv()
@@ -31,7 +31,7 @@ async def cmd_start(message: Message):
     """Обработчик команды /start"""
     await message.answer(
         "Привет! Я ReAct агент на LangGraph. Могу помочь с прогнозом погоды! "
-        "Спроси меня о погоде в любом городе на 2 августа 2025 года."
+        "Спроси меня о погоде в любом городе."
     )
 
 @dp.message(Command("help"))
@@ -47,7 +47,6 @@ async def cmd_help(message: Message):
 Я могу помочь с прогнозом погоды! Примеры запросов:
 • "Какая погода в Москве 2 августа 2025?"
 • "Какая температура будет в Берлине?"
-• "Сравни погоду в Москве и Берлине"
     """
     await message.answer(help_text)
 
@@ -57,16 +56,25 @@ async def process_message(message: Message):
     try:
         # Отправляем typing индикатор
         await bot.send_chat_action(message.chat.id, "typing")
-        
+
+        graph = create_graph()
+        compiled_graph = graph.compile()
+
         # Обрабатываем сообщение с помощью ReAct агента
         user_input = message.text
         logger.info(f"Обработка сообщения от {message.from_user.id}: {user_input}")
         
         # Запускаем ReAct агента
-        response = await run_agent(user_input)
-        
+       # response = await run_agent(user_input)
+    
+        response = await compiled_graph.ainvoke({
+            "messages":
+            [SystemMessage(content=SYSTEM_PROMPT),
+            HumanMessage(content=user_input)]}
+        )
         # Отправляем ответ
-        await message.answer(response)
+        response_text = response["messages"][-1].content
+        await message.answer(response_text)
         
     except Exception as e:
         logger.error(f"Ошибка при обработке сообщения: {e}")
